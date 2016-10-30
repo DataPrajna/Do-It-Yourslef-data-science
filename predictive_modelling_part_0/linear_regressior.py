@@ -4,39 +4,84 @@ from __future__ import print_function
 
 import tensorflow as tf
 import numpy
-rng = numpy.random
 
 
-train_X = numpy.asarray([3.3, 4.4, 5.5, 6.71, 6.93, 4.168, 9.779, 6.182, 7.59, 2.167,
-                         7.042, 10.791, 5.313, 7.997, 5.654, 9.27, 3.1])
-train_Y = numpy.asarray([1.7, 2.76, 2.09, 3.19, 1.694, 1.573, 3.366, 2.596, 2.53, 1.221,
-                         2.827, 3.465, 1.65, 2.904, 2.42, 2.94, 1.3])
-n_samples = train_X.shape[0]
+class LinearRegressor:
+
+    """
+     LinearRegressor class is designed to claculate weight (w) and bias (b) from a set of inputs and matching outputs.
+
+     Args:
+         lr  is learning rate
+         num_epocs
+         print_frequency
+
+     Examples:
+
+          let's create a traing and testing datasets
+          >>> train_X = numpy.asarray([3.3, 4.4, 5.5, 6.71, 6.93, 4.168, 9.779, 6.182, 7.59, 2.167, 7.042, 10.791, 5.313, 7.997, 5.654, 9.27, 3.1])
+          >>> train_Y = numpy.asarray([1.7, 2.76, 2.09, 3.19, 1.694, 1.573, 3.366, 2.596, 2.53, 1.221,2.827, 3.465, 1.65, 2.904, 2.42, 2.94, 1.3])
+
+          now lets instantiate the class
+
+          >>> lr = LinearRegressor(lr = 0.01, num_epocs = 1000, print_frequency = 1001)
+
+          let set the initial W and b using a random number
+
+           >>> lr.set_wb_parameter(W = numpy.random.randn(), b = numpy.random.randn())
+
+           now lets train the linear regressor on the constructor training dataset train_x and train_y
+
+          >>> W, b = lr.train(train_X = train_X, train_Y = train_Y)
+
+          now reset the w, b parameters with the learned w and b
+
+          >>> lr.set_wb_parameter(W = W, b = b)
+
+          now predict y for a given x
+
+          >>> y_hat = lr.predict(X=3.3)
+          >>> print('y_hat is {}'.format(y_hat))
 
 
-class LinearRegressior():
-    def __init__(self):
-        self.lr = 0.01
-        self.num_epocs = 1000
-        self.print_frequency = 100
+
+    """
+    def __init__(self, lr = 0.01, num_epocs = 10000, print_frequency = 1000):
+        self.lr = lr
+        self.n_samples = None
+        self.num_epocs = num_epocs
+        self.print_frequency = print_frequency
         self.X = tf.placeholder('float')
         self.Y = tf.placeholder('float')
-        self.set_wb_parameter()
 
-    def set_wb_parameter(self):
-        self.W = tf.Variable(numpy.random.randn(), name="w")
-        self.b = tf.Variable(numpy.random.randn(), name="b")
+    def set_wb_parameter(self, W=None, b=None):
+
+        if W is None:
+            self.W = tf.Variable(numpy.random.randn(), name="w")
+        else:
+            self.W = tf.Variable(W, name = "W")
+        if b is None:
+            self.b = tf.Variable(numpy.random.randn(), name="b")
+        else:
+            self.b = tf.Variable(b, name = "b")
 
     def predictor(self):
         return tf.add(tf.mul(self.X, self.W), self.b)
 
+    def predict(self, X):
+        with tf.Session() as sess:
+            sess.run(tf.initialize_all_variables())
+            return sess.run([self.predictor()],
+                     feed_dict={self.X: X})
+
     def cost_function(self):
-         return tf.reduce_sum(tf.pow(self.predictor() - self.Y, 2)) / (2 * n_samples)
+         return tf.reduce_sum(tf.pow(self.predictor() - self.Y, 2)) / (2 * self.n_samples)
 
     def solver(self):
         return tf.train.GradientDescentOptimizer(self.lr).minimize(self.cost_function())
 
-    def train(self):
+    def train(self, train_X = None, train_Y = None):
+        self.n_samples = train_X.shape[0]
         cost_function = self.cost_function()
         solver =  self.solver();
         with tf.Session() as sess:
@@ -51,10 +96,6 @@ class LinearRegressior():
                     [cost] = sess.run([cost_function], feed_dict={self.X : x, self.Y : y})
                     print('At Epoch {} the loss is {}'.format(epoch, cost))
                     print('w {} and b {}'.format(sess.run(self.W), sess.run(self.b)))
-
-    def get_wb_parameters(self):
-        with tf.Session() as sess:
-            sess.run(tf.initialize_all_variables())
             return sess.run(self.W), sess.run(self.b)
 
 
@@ -66,12 +107,17 @@ class LinearRegressior():
 
 
 
+
 if __name__=='__main__':
-    LR = LinearRegressior()
-    print("before train the w and b ", LR.get_wb_parameters())
-    LR.train()
-    print(LR.get_wb_parameters())
-    print("after train the w  and b ", LR.get_wb_parameters())
+    import doctest
+
+    doctest.testmod()
+
+    #LR = LinearRegressior()
+    #print("before train the w and b ", LR.get_wb_parameters())
+    #LR.train()
+    #print(LR.get_wb_parameters())
+    #print("after train the w  and b ", LR.get_wb_parameters())
 
 
 
