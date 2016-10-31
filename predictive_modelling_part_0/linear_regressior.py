@@ -40,13 +40,14 @@ class LinearRegressor:
 
           now predict y for a given x
 
-          >>> y_hat = lr.predict(X=3.3)
-          >>> print('y_hat is {}'.format(y_hat))
+          >>> y_hat = lr.predict(X=[3.3, 4.4, 5.5, 6.71, 6.93, 4.168, 9.779, 6.182, 7.59, 2.167, 7.042, 10.791, 5.313, 7.997, 5.654, 9.27, 3.1])
+
+
 
 
 
     """
-    def __init__(self, lr = 0.01, num_epocs = 10000, print_frequency = 1000):
+    def __init__(self, lr = 0.01, num_epocs = 10000, print_frequency = 100):
         self.lr = lr
         self.n_samples = None
         self.num_epocs = num_epocs
@@ -68,11 +69,18 @@ class LinearRegressor:
     def predictor(self):
         return tf.add(tf.mul(self.X, self.W), self.b)
 
-    def predict(self, X):
+    def predict(self, X=None, Y=None):
         with tf.Session() as sess:
             sess.run(tf.initialize_all_variables())
             return sess.run([self.predictor()],
                      feed_dict={self.X: X})
+
+    def error(self, X=None, Y=None):
+        with tf.Session() as sess:
+            sess.run(tf.initialize_all_variables())
+            return sess.run([self.cost_function()],
+                            feed_dict={self.X: X, self.Y:Y})
+
 
     def cost_function(self):
          return tf.reduce_sum(tf.pow(self.predictor() - self.Y, 2)) / (2 * self.n_samples)
@@ -93,31 +101,34 @@ class LinearRegressor:
                                          feed_dict={self.X : x, self.Y : y})
 
                 if (epoch +1) % self.print_frequency == 0:
-                    [cost] = sess.run([cost_function], feed_dict={self.X : x, self.Y : y})
+                    [cost] = sess.run([cost_function], feed_dict={self.X : train_X, self.Y : train_Y})
                     print('At Epoch {} the loss is {}'.format(epoch, cost))
                     print('w {} and b {}'.format(sess.run(self.W), sess.run(self.b)))
+
             return sess.run(self.W), sess.run(self.b)
 
 
-
-
-
-
-
-
-
+def test_linear_regressor():
+    lr = LinearRegressor(lr=0.01, num_epocs=1000, print_frequency=100)
+    train_X = numpy.asarray([3.3, 4.4, 5.5, 6.71, 6.93, 4.168, 9.779, 6.182, 7.59, 2.167, 7.042, 10.791, 5.313, 7.997, 5.654, 9.27, 3.1])
+    train_Y = numpy.asarray( [1.7, 2.76, 2.09, 3.19, 1.694, 1.573, 3.366, 2.596, 2.53, 1.221, 2.827, 3.465, 1.65, 2.904, 2.42, 2.94, 1.3])
+    lr.set_wb_parameter(W=numpy.random.randn(), b=numpy.random.randn())
+    W, b = lr.train(train_X=train_X, train_Y=train_Y)
+    lr.set_wb_parameter(W=W, b=b)
+    y_hat = lr.predict(X=[3.3, 4.4, 5.5, 6.71, 6.93, 4.168, 9.779, 6.182, 7.59, 2.167, 7.042, 10.791, 5.313, 7.997, 5.654, 9.27, 3.1])
+    error = lr.error(
+        X=[3.3, 4.4, 5.5, 6.71, 6.93, 4.168, 9.779, 6.182, 7.59, 2.167, 7.042, 10.791, 5.313, 7.997, 5.654, 9.27, 3.1],
+        Y = [1.7, 2.76, 2.09, 3.19, 1.694, 1.573, 3.366, 2.596, 2.53, 1.221, 2.827, 3.465, 1.65, 2.904, 2.42, 2.94, 1.3])
+    print(y_hat)
+    print(error)
 
 
 if __name__=='__main__':
     import doctest
 
     doctest.testmod()
+    #test_linear_regressor()
 
-    #LR = LinearRegressior()
-    #print("before train the w and b ", LR.get_wb_parameters())
-    #LR.train()
-    #print(LR.get_wb_parameters())
-    #print("after train the w  and b ", LR.get_wb_parameters())
 
 
 
