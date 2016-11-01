@@ -76,7 +76,57 @@ class PandaDataServer(BaseDataServer):
         return self.pd_data.values
 
 
+class BatchDataServer:
+    def __init__(self, X, Y, batch_size = None):
+        self.X = X
+        self.Y = Y
+        self.start = 0
+        self.end = batch_size
+        self.batch_size = batch_size
+        self.epoch = 0;
+
+    def __next__(self):
+        pass
+    def __len__(self):
+        pass
+    def __getitem__(self, item):
+        pass
+    def __iter__(self):
+        pass
+
+    def next(self):
+        if self.end >= self.X.shape[0]:
+            lx = self.X[self.start:self.end-1, :]
+            ly = self.Y[self.start:self.end-1, :]
+            self.start = 0
+            self.end = self.batch_size
+            self.epoch += 1
+        else:
+            lx = self.X[self.start:self.end, :]
+            ly = self.Y[self.start:self.end, :]
+            self.start = self.end
+            self.end += self.batch_size
+        return lx, ly
+
+
+def test_batch_data_server():
+    X = np.ones((5, 3))
+    Y = np.ones((5, 1))
+    X[0, 0] = 1
+    X[1,0]  = 2
+    X[2,0]  = 3
+    X[3,0]  = 4
+    X[4,0]  = 5
+    batch_data = BatchDataServer(X,Y,batch_size =2)
+
+    while batch_data.epoch < 10:
+        x, y = batch_data.next()
+        print('epoch= {}\n, x={}\n,  y={}'.format(batch_data.epoch, x, y))
+
+
+
 if __name__=='__main__':
-     A = PandaDataServer('https://vincentarelbundock.github.io/Rdatasets/csv/MASS/UScereal.csv')
-     print(A.get_header())
-     print(A.get_body())
+     #A = PandaDataServer('https://vincentarelbundock.github.io/Rdatasets/csv/MASS/UScereal.csv')
+     #print(A.get_header())
+     #print(A.get_body())
+     test_batch_data_server()
