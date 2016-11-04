@@ -14,7 +14,7 @@ class LinearRegressor:
 
      Args:
          lr  is learning rate
-         num_epocs
+         num_epochs
          print_frequency
 
      Examples:
@@ -24,7 +24,7 @@ class LinearRegressor:
           >>> train_X = numpy.linspace(-3, 3, num_sample, dtype=numpy.float32)
           >>> train_X = train_X.reshape((-1, 1))
           #>>> train_Y = 5+2*train_X+4*train_X*train_X + 0.1*numpy.random.randn(num_sample, 1)
-          >>> train_Y = numpy.sin(train_X) + 0.1*numpy.random.randn(num_sample, 1)
+          >>> train_Y = numpy.sin(train_X)
 
           >>> train_Y = train_Y.reshape(-1, 1)
 
@@ -111,9 +111,6 @@ class LinearRegressor:
                     print('w {} '.format(sess.run(self.W)))
 
             return sess.run(self.W)
-
-
-
 
 if __name__ == '__main__':
     import doctest
