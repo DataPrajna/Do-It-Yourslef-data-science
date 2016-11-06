@@ -64,6 +64,6 @@ def test_sinusoidal_regression():
 
 
 if __name__ == "__main__":
-    #test_sinusoidal_regression()
-    test_multi_order_polynomial()
+    test_sinusoidal_regression()
+    #test_multi_order_polynomial()
     #test_first_order_polynomial()
