@@ -1,8 +1,8 @@
 from __future__ import print_function
 
-from predictive_modelling_part_0.predictive_model import Model
 from common.data_server import BatchDataServer
 from common.model import TFBuildingBlocks
+from common.h5_reader_writer import H5Writer
 
 
 import tensorflow as tf
@@ -21,11 +21,9 @@ class DeepPolyFit:
 
           let's create a traing and testing datasets
 
-
     """
-
-
     def __init__(self, config):
+        self.config = config
         self.lr = config['learning_rate']
         self.n_samples = None
         self.num_epochs = config['num_epochs']
@@ -37,7 +35,6 @@ class DeepPolyFit:
         self.Y = tf.placeholder(shape=(None, 1), dtype=tf.float32)
         self.tensors = TFBuildingBlocks.create_sequence_of_xw_layers(self.X, config)
 
-
     def project_to_higher_dims(self, x):
         return tf.tile(x, tf.constant([1, self.order_poly], dtype=tf.int32)) ** tf.cast(
             tf.range(self.order_poly), dtype=tf.float32)
@@ -45,13 +42,19 @@ class DeepPolyFit:
     def predictor(self):
         return self.tensors['y_hat']
 
-    def predict(self, X=None):
+    def predict(self, learned_params, X=None):
+        self.update_tensors_with_learned_params(learned_params)
         with tf.Session() as sess:
             sess.run(tf.initialize_all_variables())
             return sess.run([self.predictor()],
                             feed_dict={self.x1d: X})
 
-    def error(self, X=None, Y=None):
+    def update_tensors_with_learned_params(self, learned_params):
+        self.tensors = TFBuildingBlocks.create_sequence_of_xw_layers_from_learned_params(self.X, learned_params, config=self.config)
+
+
+    def error(self, learned_params, X=None, Y=None):
+        self.update_tensors_with_learned_params(learned_params)
         with tf.Session() as sess:
             sess.run(tf.initialize_all_variables())
             return sess.run([self.cost_function()],
@@ -63,11 +66,24 @@ class DeepPolyFit:
     def solver(self):
         return tf.train.GradientDescentOptimizer(self.lr).minimize(self.cost_function())
 
-    def train(self, train_X=None, train_Y=None):
+    def get_trained_params(self, sess):
+        params_dict = dict()
+        for key in self.tensors:
+            if isinstance(self.tensors[key], tf.Variable):
+                params_dict[key] = sess.run(self.tensors[key])
+
+        return params_dict
+
+    def write_params_to_file(self, filename, params_dict):
+        H5Writer.write(filename, self.config, params_dict)
+
+    def train(self, train_X=None, train_Y=None, filename=None):
         self.n_samples = train_X.shape[0]
         cost_function = self.cost_function()
         solver = self.solver();
         batch_data = BatchDataServer(train_X, train_Y, batch_size = 10000)
+
+
         with tf.Session() as sess:
             sess.run(tf.initialize_all_variables())
             while batch_data.epoch < self.num_epochs:
@@ -78,6 +94,13 @@ class DeepPolyFit:
                 if (batch_data.epoch + 1) % self.print_frequency == 0:
                     [cost] = sess.run([cost_function], feed_dict={self.x1d: train_X, self.Y: train_Y})
                     print('At Epoch {} the loss is {}'.format(batch_data.epoch, cost))
+            params_dict = self.get_trained_params(sess)
+        return params_dict
+
+
+
+
+
 
 
 

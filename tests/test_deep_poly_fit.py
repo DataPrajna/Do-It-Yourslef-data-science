@@ -11,7 +11,7 @@ def test_first_order_polynomial():
         'order_poly': 4,
         'learning_rate': 0.01,
         'num_epochs': 5000,
-        'print_frequency': 10,
+        'print_frequency': 1000,
 
         'hidden_layers': [
             {'op_name': 'h1', 'var_name': 'w1', 'shape': [-1, 35]},
@@ -23,18 +23,21 @@ def test_first_order_polynomial():
 
     }
     lr = DeepPolyFit(config)
-    train_x = numpy.linspace(-1,1,100,dtype = numpy.float32)
+    train_x = numpy.linspace(-1,1,10000, dtype=numpy.float32)
     print(train_x)
     train_x = train_x.reshape(-1,1)
     train_y = 5 + 2*train_x
-    lr.train(train_X = train_x, train_Y = train_y)
+    learned_params = lr.train(train_X = train_x, train_Y = train_y)
+    lr.update_tensors_with_learned_params(learned_params)
+    error = lr.error(learned_params, X=train_x, Y=train_y)
+    print("error", error)
 
 def test_sinusoidal_regression():
     config = {
         'num_hidden_layers': 3,
         'order_poly': 5,
         'learning_rate': 0.01,
-        'num_epochs': 50000,
+        'num_epochs': 500,
         'print_frequency': 1000,
 
         'hidden_layers': [
@@ -50,8 +53,8 @@ def test_sinusoidal_regression():
     train_x = numpy.linspace(-3,3, 10000, dtype = numpy.float32)
     train_x = train_x.reshape(-1,1)
     train_y = numpy.sin(train_x) +  numpy.sin(3*train_x)
-    lr.train(train_X = train_x, train_Y = train_y)
+    lr.train(train_X = train_x, train_Y = train_y, filename='/tmp/sin.h5')
 
 if __name__ == "__main__":
-    #test_first_order_polynomial()
-    test_sinusoidal_regression()
+    test_first_order_polynomial()
+    #test_sinusoidal_regression()
