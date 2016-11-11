@@ -22,7 +22,7 @@ class DeepPolyFit:
           let's create a traing and testing datasets
 
     """
-    def __init__(self, config):
+    def __init__(self, config, X, Y):
         self.config = config
         self.lr = config['learning_rate']
         self.n_samples = None
@@ -34,6 +34,7 @@ class DeepPolyFit:
         self.X = self.project_to_higher_dims(self.x1d)
         self.Y = tf.placeholder(shape=(None, 1), dtype=tf.float32)
         self.tensors = TFBuildingBlocks.create_sequence_of_xw_layers(self.X, config)
+        self.params = self.train(train_X= X, train_Y = Y)
 
     def project_to_higher_dims(self, x):
         return tf.tile(x, tf.constant([1, self.order_poly], dtype=tf.int32)) ** tf.cast(
@@ -42,8 +43,8 @@ class DeepPolyFit:
     def predictor(self):
         return self.tensors['y_hat']
 
-    def predict(self, learned_params, X=None):
-        self.update_tensors_with_learned_params(learned_params)
+    def predict(self, X=None):
+        self.update_tensors_with_learned_params(self.params)
         with tf.Session() as sess:
             sess.run(tf.initialize_all_variables())
             return sess.run([self.predictor()],
@@ -51,7 +52,6 @@ class DeepPolyFit:
 
     def update_tensors_with_learned_params(self, learned_params):
         self.tensors = TFBuildingBlocks.create_sequence_of_xw_layers_from_learned_params(self.X, learned_params, config=self.config)
-
 
     def error(self, learned_params, X=None, Y=None):
         self.update_tensors_with_learned_params(learned_params)
@@ -77,7 +77,7 @@ class DeepPolyFit:
     def write_params_to_file(self, filename, params_dict):
         H5Writer.write(filename, self.config, params_dict)
 
-    def train(self, train_X=None, train_Y=None, filename=None):
+    def train(self, train_X=None, train_Y=None):
         self.n_samples = train_X.shape[0]
         cost_function = self.cost_function()
         solver = self.solver();
