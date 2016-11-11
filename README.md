@@ -3,7 +3,7 @@ This project explores key aspects  of data science by  practical examples. At th
 
 This project first develops a simple linear regression model. Tested the model with polynomial and sinusoidal training data set. 
 
-In the next phase hidden layers are added to this simple models to improve acciracy of fitting.
+In the next phase, hidden layers are added to this simple regression model to improve accuracy of fitting.
 
 The developed models are are tested with MNIST dataset. 
 
