@@ -29,9 +29,9 @@ def test_first_order_polynomial():
 
 def test_multi_order_polynomial():
     lr = LinearRegressor(lr = 0.01, num_epocs = 1000, print_frequency = 100, num_features = 5)
-    train_x = numpy.linspace(-1, 1, 100, dtype = numpy.float32)
+    train_x = numpy.linspace(-1, 1, 1000000, dtype = numpy.float32)
     train_x = train_x.reshape(-1,1)
-    train_y = 5  + 2*train_x + 3*train_x**2 + 10*train_x**3 + 7*train_x**4
+    train_y = 5  + 2*train_x + 3*train_x**2
     lr.set_parameters()
     W = lr.train(train_X = train_x, train_Y = train_y)
     W = lr.set_parameters(W = W)
@@ -47,7 +47,7 @@ def test_sinusoidal_regression():
     lr = LinearRegressor(lr = 0.001, num_epocs = 5000, print_frequency = 100, num_features = 5)
     train_x = numpy.linspace(-3,3, 10000, dtype = numpy.float32)
     train_x = train_x.reshape(-1,1)
-    train_y = numpy.sin(train_x) +  numpy.sin(3*train_x)
+    train_y = numpy.sin(train_x)
     lr.set_parameters()
     W = lr.train(train_X = train_x, train_Y = train_y)
     W = lr.set_parameters(W=W)
