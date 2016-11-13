@@ -3,7 +3,7 @@ import csv
 import numpy as np
 import pandas as pd
 
-
+'''
 class BaseDataServer(metaclass=ABCMeta):
     def __init__(self, source_name):
         self.fid = None
@@ -76,7 +76,7 @@ class PandaDataServer(BaseDataServer):
 
     def get_body(self):
         return self.pd_data.values
-
+'''
 
 class BatchDataServer:
     def __init__(self, X, Y, batch_size = None):
