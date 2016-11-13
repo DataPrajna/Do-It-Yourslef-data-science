@@ -9,6 +9,13 @@ import tensorflow as tf
 import numpy
 from tensorflow.examples.tutorials.mnist import input_data
 mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
+
+
+
+
+
+
+
 class MnistModel:
     """
      MnistModel class is designed to claculate weight (w) and bias (b) from a set of inputs and matching outputs.
@@ -26,6 +33,7 @@ class MnistModel:
     def __init__(self, config):
         self.config = config
         self.lr = config['learning_rate']
+        self.learning_rate = tf.placeholder(tf.float32, shape=[])
         self.n_samples = None
         self.num_epochs = config['num_epochs']
         self.print_frequency = config['print_frequency']
@@ -37,9 +45,20 @@ class MnistModel:
 
 
     def model(self):
-        self.tensors['w1'] = tf.Variable(tf.truncated_normal(shape=(784, 10)), dtype=tf.float32)
-        self.tensors['b1'] = tf.Variable(tf.truncated_normal(shape =(1,10)), dtype=tf.float32)
-        self.tensors['y_hat'] = tf.nn.softmax(tf.add(tf.matmul(self.X, self.tensors['w1']), self.tensors['b1']))
+        self.tensors['w1'] = tf.Variable(tf.truncated_normal(shape=(784, 30), stddev=0.001), dtype=tf.float32)
+        self.tensors['b1'] = tf.Variable(tf.truncated_normal(shape =(1,30), stddev=0.001), dtype=tf.float32)
+        self.tensors['h1'] = tf.nn.relu(tf.add(tf.matmul(self.X, self.tensors['w1']), self.tensors['b1']))
+
+        self.tensors['w2'] = tf.Variable(tf.truncated_normal(shape=(30, 20), stddev=0.001), dtype=tf.float32)
+        self.tensors['b2'] = tf.Variable(tf.truncated_normal(shape=(1, 20), stddev=0.001), dtype=tf.float32)
+        self.tensors['h2'] = tf.nn.relu(tf.add(tf.matmul( self.tensors['h1'], self.tensors['w2']), self.tensors['b2']))
+
+
+        self.tensors['w3'] = tf.Variable(tf.truncated_normal(shape=(20, 10), stddev=0.01), dtype=tf.float32)
+        self.tensors['b3']= tf.Variable(tf.truncated_normal(shape=(1, 10), stddev=0.01), dtype=tf.float32)
+
+
+        self.tensors['y_hat'] = tf.nn.softmax(tf.add(tf.matmul(self.tensors['h2'], self.tensors['w3']), self.tensors['b3']))
         correct_prediction = tf.equal(tf.argmax(self.Y, 1), tf.argmax(self.predictor(), 1))
         self.tensors['accuracy'] = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
@@ -54,9 +73,21 @@ class MnistModel:
                             feed_dict={self.X: X})
 
     def update_tensors_with_learned_params(self, learned_params):
+
         self.tensors['w1'] = tf.Variable(learned_params['w1'], dtype=tf.float32)
         self.tensors['b1'] = tf.Variable(learned_params['b1'], dtype=tf.float32)
-        self.tensors['y_hat'] = tf.nn.softmax(tf.add(tf.matmul(self.X, self.tensors['w1']), self.tensors['b1']))
+        self.tensors['h1'] = tf.nn.relu(tf.add(tf.matmul(self.X, self.tensors['w1']), self.tensors['b1']))
+
+        self.tensors['w2'] = tf.Variable(learned_params['w2'], dtype=tf.float32)
+        self.tensors['b2'] = tf.Variable(learned_params['b2'], dtype=tf.float32)
+        self.tensors['h2'] = tf.nn.relu(tf.add(tf.matmul(self.tensors['h1'], self.tensors['w2']), self.tensors['b2']))
+        self.tensors['w3'] = tf.Variable(learned_params['w3'], dtype=tf.float32)
+        self.tensors['b3'] = tf.Variable(learned_params['b3'], dtype=tf.float32)
+
+        self.tensors['y_hat'] = tf.nn.softmax(
+            tf.add(tf.matmul(self.tensors['h2'], self.tensors['w3']), self.tensors['b3']))
+
+
 
 
 
@@ -67,7 +98,7 @@ class MnistModel:
         return tf.reduce_mean(-tf.reduce_sum( self.Y * tf.log(self.predictor()), reduction_indices=[1]))
 
     def solver(self):
-        return tf.train.GradientDescentOptimizer(self.lr).minimize(self.cost_function())
+        return tf.train.GradientDescentOptimizer(self.learning_rate).minimize(self.cost_function())
 
     def get_trained_params(self, sess):
         params_dict = dict()
@@ -85,7 +116,7 @@ class MnistModel:
         cost_function = self.cost_function()
         solver = self.solver();
         batch_data = BatchDataServer(train_X, train_Y, batch_size = 1000)
-
+        lr = self.lr
 
         with tf.Session() as sess:
             sess.run(tf.initialize_all_variables())
@@ -95,17 +126,20 @@ class MnistModel:
             while batch_data.epoch < self.num_epochs:
                 x1, y1 = batch_data.next()
                 [_, cost] = sess.run([solver, cost_function],
-                                         feed_dict={self.X: x1, self.Y: y1})
-
+                                         feed_dict={self.X: x1, self.Y: y1,  self.learning_rate:lr})
                 if (batch_data.epoch + 1) % self.print_frequency == 0:
-                    [cost] = sess.run([cost_function], feed_dict={self.X: train_X, self.Y: train_Y})
+                    [cost] = sess.run([cost_function], feed_dict={self.X: train_X, self.Y: train_Y, self.learning_rate:lr})
                     print('At Epoch {} the loss is {}'.format(batch_data.epoch, cost))
                     batch_data.epoch = batch_data.epoch + 1
+                    lr = self.lr * numpy.exp(-3.0*(batch_data.epoch/(self.num_epochs+1.0)))
+                    print(lr)
+
 
             params_dict = self.get_trained_params(sess)
             [accuracy] = sess.run([self.tensors['accuracy']],
                                   feed_dict={self.X: mnist.test.images, self.Y: mnist.test.labels})
-            print("accuracy on testing images after training are", accuracy)
+            self.config['learning_rate'] = lr
+            print("accuracy on testing images after training is {} with a learning rate of {}".format(accuracy, lr))
 
 
         return params_dict
@@ -121,7 +155,7 @@ def test_train_mnist():
         'num_hidden_layers': 4,
         'order_poly': 4,
         'learning_rate': 0.5,
-        'num_epochs': 1000,
+        'num_epochs': 10,
         'print_frequency': 100,
     }
 
@@ -130,6 +164,8 @@ def test_train_mnist():
 
     lr = MnistModel(config)
     learned_params =  lr.train(train_X = train_x, train_Y = train_y, filename='/tmp/sin.h5')
+    y_hat = lr.predict(learned_params, X=mnist.test.images[0:1, :])
+    print(numpy.argmax(y_hat[0], axis=1))
 
 
 

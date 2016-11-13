@@ -24,14 +24,15 @@ def test_deep_first_order_polynomial():
         ]
 
     }
-    lr = DeepPolyFit(config)
+
     train_x = numpy.linspace(-1,1,1000, dtype=numpy.float32)
     print(train_x)
     train_x = train_x.reshape(-1,1)
-    train_y = 5 + 2*train_x + 3*train_x*train_x
+    train_y = 5 + 2*train_x
+    lr = DeepPolyFit(config, train_x, train_y)
     learned_params = lr.train(train_X = train_x, train_Y = train_y)
     lr.update_tensors_with_learned_params(learned_params)
-    y_hat = lr.predict(learned_params, X = train_x)
+    y_hat = lr.predict(X = train_x)
     y_hat = numpy.asarray(y_hat, dtype = numpy.float32, order = None)
     y_hat = y_hat.reshape(-1,1)
     plt.plot(train_x, train_y, 'ro')
@@ -40,6 +41,51 @@ def test_deep_first_order_polynomial():
     plt.show()
     #error = lr.error(learned_params, X=train_x, Y=train_y)
    # print("error", error)
+
+
+def test_random_deep_first_order_polynomial():
+    config = {
+        'num_hidden_layers': 3,
+        'order_poly': 4,
+        'learning_rate': 0.01,
+        'num_epochs': 5000,
+        'print_frequency': 1000,
+
+        'hidden_layers': [
+            {'op_name': 'h1', 'var_name': 'w1', 'shape': [-1, 35]},
+            {'op_name': 'h2', 'var_name': 'w2', 'shape': [-1, 15]},
+            {'op_name': 'h3', 'var_name': 'w3', 'shape': [-1, 7]},
+            {'op_name': 'h4', 'var_name': 'w4', 'shape': [-1, 17]},
+            {'op_name': 'y_hat', 'var_name': 'w5', 'shape': [-1, 1]}
+        ]
+
+    }
+
+    num_points = 1000
+    vectors_set = []
+    for i in range(num_points):
+        x1 = numpy.random.normal(0.0, 0.55)
+        y1 = x1 * 0.1 + 0.3 + numpy.random.normal(0.0, 0.03)
+        vectors_set.append([x1, y1])
+
+    train_x = [v[0] for v in vectors_set]
+    train_y = [v[1] for v in vectors_set]
+    train_x = numpy.asarray(train_x)
+    train_x = train_x.reshape(-1, 1)
+    train_y = numpy.asarray(train_y)
+    train_y = train_y.reshape(-1, 1)
+    lr = DeepPolyFit(config, train_x, train_y)
+    learned_params = lr.train(train_X=train_x, train_Y=train_y)
+    lr.update_tensors_with_learned_params(learned_params)
+    y_hat = lr.predict(X= train_x)
+    y_hat = numpy.asarray(y_hat, dtype=numpy.float32, order=None)
+    y_hat = y_hat.reshape(-1, 1)
+    plt.plot(train_x, train_y, 'ro')
+    plt.hold(True)
+    plt.plot(train_x, y_hat,'bo')
+    plt.show()
+
+
 
 def test_deep_sinusoidal_regression():
     config = {
@@ -76,5 +122,6 @@ def test_deep_sinusoidal_regression():
 
 
 if __name__ == "__main__":
-    #test_deep_first_order_polynomial()
-    test_deep_sinusoidal_regression()
+     #test_deep_first_order_polynomial()
+     test_random_deep_first_order_polynomial()
+    #test_deep_sinusoidal_regression()
