@@ -47,9 +47,12 @@ def test_mnist_cnn_model():
         im1 = im1.reshape(28,28)
         plt.imshow(im1)
         y_true = numpy.argmax(y_test[i,:])
+        #print('The image is classified as {} but the true image is {}'.format(numpy.argmax(y_hat[i, :]), y_true))
+
         plt.suptitle('The image is classified as {} but the true image is {}'.format(numpy.argmax(y_hat[i, :]), y_true))
         plt.show()
         plt.waitforbuttonpress()
+        plt.gcf().clear()
 
 
 
