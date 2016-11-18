@@ -33,23 +33,20 @@ def train_mnist_cnn_model():
 def test_mnist_cnn_model():
 
     config, learned_params = H5Reader.read("../trained_model/mnist_cnn_model_3_layers_adam.h5")
-    lr = cnn.MnistModel(config)
+    lr = cnn.MnistModel(config, learned_params=learned_params)
 
-    x_test = m.mnist.test.images
-    y_test = m.mnist.test.labels
-
-    y_hat = lr.predict(learned_params, X = x_test)
-    y_hat = y_hat[0]
-    print(y_hat[0])
 
     for i in range(900, 1000):
-        im1 = x_test[i,:]
-        im1 = im1.reshape(28,28)
-        plt.imshow(im1)
-        y_true = numpy.argmax(y_test[i,:])
-        #print('The image is classified as {} but the true image is {}'.format(numpy.argmax(y_hat[i, :]), y_true))
+        x_test = m.mnist.test.images[i, :].reshape(1, 784)
+        y_test = m.mnist.test.labels[i, :].reshape(1, 10)
 
-        plt.suptitle('The image is classified as {} but the true image is {}'.format(numpy.argmax(y_hat[i, :]), y_true))
+        y_hat = lr.predict(X=x_test)
+
+        im1 = x_test.reshape(28,28)
+        plt.imshow(im1)
+        y_true = numpy.argmax(y_test)
+
+        plt.suptitle('The image is classified as {} but the true image is {}'.format(numpy.argmax(y_hat[0]), y_true))
         plt.show()
         plt.waitforbuttonpress()
         plt.gcf().clear()
