@@ -24,7 +24,7 @@ class MnistModel:
           let's create a traing and testing datasets
 
     """
-    def __init__(self, config):
+    def __init__(self, config, learned_params=None):
         self.config = config
         self.lr = config['learning_rate']
         self.n_samples = None
@@ -35,20 +35,40 @@ class MnistModel:
         self.p = tf.reshape(self.X, [-1, 28, 28, 1])
         self.Y = tf.placeholder(shape=(None, 10), dtype=tf.float32)
         self.tensors = dict()
-        self.model()
+        self.model(learned_params=learned_params)
 
 
-    def model(self):
+    def get_learned_params(self, learned_params):
+        for key in learned_params:
+            self.tensors[key] = tf.Variable(learned_params[key])
+
+    def initial_parameters(self):
         self.tensors['w1'] = tf.Variable(tf.truncated_normal(shape=(5, 5, 1, 32), stddev=0.1))
         self.tensors['b1'] = tf.Variable(tf.constant(0.1, shape=(1, 32)))
+
+        self.tensors['w2'] = tf.Variable(tf.truncated_normal(shape=(5, 5, 32, 64), stddev=0.1))
+        self.tensors['b2'] = tf.Variable(tf.constant(0.1, shape=(1, 64)))
+
+        self.tensors['w3'] = tf.Variable(tf.truncated_normal(shape=(7 * 7 * 64, 1024), stddev=0.1))
+        self.tensors['b3'] = tf.Variable(tf.constant(0.1, shape=(1, 1024)))
+
+        self.tensors['w4'] = tf.Variable(tf.truncated_normal(shape=(1024, 10), stddev=0.1))
+        self.tensors['b4'] = tf.Variable(tf.constant(0.1, shape=(1, 10)))
+
+
+
+
+
+    def model(self, learned_params=None):
+        if learned_params == None:
+            self.initial_parameters()
+        else:
+            self.get_learned_params(learned_params)
 
         self.tensors['conv1'] = tf.nn.conv2d(self.p, self.tensors['w1'], strides=[1, 1, 1, 1], padding='SAME')
         self.tensors['conv_plus_add1'] = tf.nn.relu(self.tensors['conv1'] + self.tensors['b1'])
         self.tensors['h1'] = tf.nn.max_pool(self.tensors['conv_plus_add1'], ksize=[1, 2, 2, 1],
                        strides=[1, 2, 2, 1], padding='SAME')
-
-        self.tensors['w2'] = tf.Variable(tf.truncated_normal(shape=(5, 5, 32, 64), stddev=0.1))
-        self.tensors['b2'] = tf.Variable(tf.constant(0.1, shape=(1, 64)))
 
         self.tensors['conv2'] = tf.nn.conv2d(self.tensors['h1'], self.tensors['w2'], strides=[1, 1, 1, 1], padding='SAME')
         self.tensors['conv_plus_add2'] = tf.nn.relu(self.tensors['conv2'] + self.tensors['b2'])
@@ -56,61 +76,26 @@ class MnistModel:
                                             strides=[1, 2, 2, 1], padding='SAME')
         self.tensors['h2'] = tf.reshape(self.tensors['h2'], [-1, 7 * 7 * 64])
 
-        self.tensors['w3'] = tf.Variable(tf.truncated_normal(shape=(7*7*64, 1024), stddev=0.1))
-        self.tensors['b3'] = tf.Variable(tf.constant(0.1, shape=(1, 1024)))
         self.tensors['h3'] = tf.nn.relu(tf.matmul(self.tensors['h2'], self.tensors['w3']) + self.tensors['b3'])
+        if learned_params == None:
+            self.keep_prob = tf.placeholder(tf.float32)
+            self.tensors['drop_h3'] = tf.nn.dropout(self.tensors['h3'], self.keep_prob)
+            self.tensors['y_hat'] = tf.nn.softmax(tf.matmul(self.tensors['drop_h3'], self.tensors['w4']) + self.tensors['b4'])
+        else:
+            self.tensors['y_hat'] = tf.nn.softmax(
+                tf.matmul(self.tensors['h3'], self.tensors['w4']) + self.tensors['b4'])
 
-        self.keep_prob = tf.placeholder(tf.float32)
-        self.tensors['drop_h3'] = tf.nn.dropout(self.tensors['h3'], self.keep_prob)
-
-        self.tensors['w4'] = tf.Variable(tf.truncated_normal(shape=(1024, 10), stddev=0.1))
-        self.tensors['b4'] = tf.Variable(tf.constant(0.1, shape=(1, 10)))
-        self.tensors['y_hat'] = tf.nn.softmax(tf.matmul(self.tensors['drop_h3'], self.tensors['w4']) + self.tensors['b4'])
         correct_prediction = tf.equal(tf.argmax(self.Y, 1), tf.argmax(self.predictor(), 1))
         self.tensors['accuracy'] = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
     def predictor(self):
         return self.tensors['y_hat']
 
-    def predict(self, learned_params, X=None):
-        self.update_tensors_with_learned_params(learned_params)
+    def predict(self, X=None):
         with tf.Session() as sess:
             sess.run(tf.initialize_all_variables())
             return sess.run([self.predictor()],
                             feed_dict={self.X: X})
-
-    def update_tensors_with_learned_params(self, learned_params):
-
-        self.tensors['w1'] = tf.Variable(learned_params['w1'])
-        self.tensors['b1'] = tf.Variable(learned_params['b1'])
-        self.tensors['conv1'] = tf.nn.conv2d(self.p, self.tensors['w1'], strides=[1, 1, 1, 1], padding='SAME')
-        self.tensors['conv_plus_add1'] = tf.nn.relu(self.tensors['conv1'] + self.tensors['b1'])
-        self.tensors['h1'] = tf.nn.max_pool(self.tensors['conv_plus_add1'], ksize=[1, 2, 2, 1],
-                       strides=[1, 2, 2, 1], padding='SAME')
-
-
-        self.tensors['w2'] = tf.Variable(learned_params['w2'])
-        self.tensors['b2'] = tf.Variable(learned_params['b2'])
-        self.tensors['conv2'] = tf.nn.conv2d(self.tensors['h1'], self.tensors['w2'], strides=[1, 1, 1, 1],
-                                             padding='SAME')
-        self.tensors['conv_plus_add2'] = tf.nn.relu(self.tensors['conv2'] + self.tensors['b2'])
-        self.tensors['h2'] = tf.nn.max_pool(self.tensors['conv_plus_add2'], ksize=[1, 2, 2, 1],
-                                            strides=[1, 2, 2, 1], padding='SAME')
-        self.tensors['h2'] = tf.reshape(self.tensors['h2'], [-1, 7 * 7 * 64])
-
-        self.tensors['w3'] = tf.Variable(learned_params['w3'])
-        self.tensors['b3'] = tf.Variable(learned_params['b3'])
-        self.tensors['h3'] = tf.nn.relu(tf.matmul(self.tensors['h2'], self.tensors['w3']) + self.tensors['b3'])
-
-        self.tensors['w4'] = tf.Variable(learned_params['w4'])
-        self.tensors['b4'] = tf.Variable(learned_params['b4'])
-
-        self.tensors['y_hat'] = tf.nn.softmax(
-            tf.matmul(self.tensors['h3'], self.tensors['w4']) + self.tensors['b4'])
-        correct_prediction = tf.equal(tf.argmax(self.Y, 1), tf.argmax(self.predictor(), 1))
-        self.tensors['accuracy'] = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-
-
 
     def cost_function(self):
         return tf.reduce_mean(-tf.reduce_sum( self.Y * tf.log(self.predictor()), reduction_indices=[1]))
