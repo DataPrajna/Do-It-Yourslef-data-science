@@ -86,6 +86,13 @@ class BatchDataServer:
         self.end = batch_size
         self.batch_size = batch_size
         self.epoch = 0;
+        self.reset()
+
+    def reset(self):
+        indx = np.random.randint(0, self.X.shape[0], self.X.shape[0])
+        self.X =self.X[indx, :]
+        self.Y =self.Y[indx, :]
+
 
     def __next__(self):
         pass
@@ -98,6 +105,7 @@ class BatchDataServer:
 
     def next(self):
         if self.end >= self.X.shape[0]:
+            #self.reset()
             lx = self.X[self.start:self.end-1, :]
             ly = self.Y[self.start:self.end-1, :]
             self.start = 0
