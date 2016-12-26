@@ -1,6 +1,7 @@
 import h5py
 import json
 import numpy as np
+import tensorflow as tf
 
 class H5Writer:
     @staticmethod
@@ -10,7 +11,7 @@ class H5Writer:
             meta_group.attrs['config'] = json.dumps(config)
             data_group = fid.create_group('data')
             for key in params_dict:
-                data_group.create_dataset(name=key, data=params_dict[key])
+                data_group.create_dataset(name=key, data=params_dict[key], dtype=np.float32)
 
 
 class H5Reader:
@@ -20,7 +21,7 @@ class H5Reader:
             config = json.loads(fid['meta'].attrs['config'])
             params_dict = dict()
             for key in  fid['data']:
-                params_dict[key] = fid['data'][key].value
+                params_dict[key] = tf.Variable(fid['data'][key].value)
         return config, params_dict
 
 

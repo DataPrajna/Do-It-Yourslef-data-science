@@ -80,37 +80,28 @@ class PandaDataServer(BaseDataServer):
 
 class BatchDataServer:
     def __init__(self, X, Y, batch_size = None):
-        self.X = X
-        self.Y = Y
         self.start = 0
         self.end = batch_size
         self.batch_size = batch_size
-        self.epoch = 0;
-        self.reset()
+        self.X, self.Y = BatchDataServer.reset(X, Y)
 
-    def reset(self):
-        indx = np.random.randint(0, self.X.shape[0], self.X.shape[0])
-        self.X =self.X[indx, :]
-        self.Y =self.Y[indx, :]
+    @staticmethod
+    def reset(X, Y):
+        indx = np.random.randint(0, X.shape[0], X.shape[0])
+        X =X[indx, :]
+        Y = Y[indx, :]
+        return X, Y
 
 
-    def __next__(self):
-        pass
     def __len__(self):
-        pass
-    def __getitem__(self, item):
-        pass
-    def __iter__(self):
-        pass
+        return int(np.ceil(self.X.shape[0]/self.batch_size))
 
     def next(self):
         if self.end >= self.X.shape[0]:
-            #self.reset()
-            lx = self.X[self.start:self.end-1, :]
-            ly = self.Y[self.start:self.end-1, :]
+            lx = self.X[self.start:, :]
+            ly = self.Y[self.start:, :]
             self.start = 0
             self.end = self.batch_size
-            self.epoch += 1
         else:
             lx = self.X[self.start:self.end, :]
             ly = self.Y[self.start:self.end, :]

@@ -48,6 +48,7 @@ class TF_OPS:
 
 
 
+
 def translate(old_model, new_model):
     config = {
 
@@ -126,11 +127,11 @@ class VGG:
         self.node['mp_5'] =  TF_OPS.faltten_layer(TF_OPS.max_pool(self.node['c_5_3']))
 
         self.node['fc_6'] = TF_OPS.fc_layer(self.node['mp_5'], self.wbp['fc_6.w'], self.wbp['fc_6.b'])
-        #self.node['fc_7'] = TF_OPS.fc_layer(self.node['fc_6'], self.wbp['fc_7.w'], self.wbp['fc_7.b'])
-        #self.node['fc_8'] = TF_OPS.fc_layer(self.node['fc_7'], self.wbp['fc_8.w'], self.wbp['fc_8.b'])
-        #self.node['fc_9'] = TF_OPS.fc_layer(self.node['fc_6'], self.wbp['fc_9.w'], self.wbp['fc_9.b'], is_relu=False)
+        self.node['fc_7'] = TF_OPS.fc_layer(self.node['fc_6'], self.wbp['fc_7.w'], self.wbp['fc_7.b'])
+        self.node['fc_8'] = TF_OPS.fc_layer(self.node['fc_7'], self.wbp['fc_8.w'], self.wbp['fc_8.b'], is_relu=False)
+        #self.node['fc_9'] = TF_OPS.fc_layer(self.node['fc_8'], self.wbp['fc_9.w'], self.wbp['fc_9.b'], is_relu=False)
 
-        self.node['fc_9'], self.wbp['fc_9.w'], self.wbp['fc_9.b'] = TF_OPS.fc_layer_ri(self.node['fc_6'], shape =[-1, 1])
+        self.node['fc_9'], self.wbp['fc_9.w'], self.wbp['fc_9.b'] = TF_OPS.fc_layer_ri(self.node['fc_8'], shape =[-1, 1])
 
         #self.node['predictor'] = tf.nn.softmax(self.node['fc_8'], name="prob")
 
@@ -158,22 +159,19 @@ class VGG:
 
 
     def solver(self):
-        return tf.train.AdagradOptimizer(0.0001).minimize(self.cost_function_l1())
+        return tf.train.AdagradOptimizer(0.01).minimize(self.cost_function_l1())
 
     def evaluate(self, sess, bp):
         MAE_T = self.MAE()
         total_cost = 0
         import numpy as np
         from scipy import stats
-        from time import time
         y_hat_T = self.node['fc_9']
         gt = []
         pred = []
         for b in range(len(bp)):
             x, y = bp.next()
-            time_s = time()
             cost, y_hat = sess.run([MAE_T, y_hat_T], feed_dict={self.X: x, self.Y: y})
-            print('time taken {}'.format(time()-time_s))
             if y.shape[0] == 7:
                 y1 = np.reshape(y, [1, -1])
                 y1_hat = np.reshape(y_hat, [1, -1])
@@ -195,8 +193,6 @@ class VGG:
     def evaluate_standalone(self, bp):
         import numpy as np
         from scipy import stats
-
-
         MAE_T = self.MAE()
         y_hat_T = self.node['fc_9']
         total_cost = 0
@@ -209,16 +205,16 @@ class VGG:
                 y1 = np.reshape(y, [1, -1])
                 y1_hat = np.reshape(y_hat, [1, -1])
                 coe = np.corrcoef(y1, y1_hat)
-                print('testing person:', coe)
+                print('person:', coe)
                 srocc = stats.spearmanr(y1, y1_hat)
-                print('testing SROCC:', srocc)
+                print('SROCC:', srocc)
 
                 total_cost += cost[0]
             MAE = float(total_cost) / len(bp)
         return MAE
 
     @staticmethod
-    def split_into_train_test_data_set(data_x, data_y, sf=0.2):
+    def split_into_train_test_data_set(data_x, data_y, sf=0.8):
         train_num_sample = int(data_x.shape[0] * sf)
         X, Y = BatchDataServer.reset(data_x, data_y)
         return (X[:train_num_sample, :], Y[:train_num_sample, :]), (X[train_num_sample:, :], Y[train_num_sample:, :])
@@ -240,7 +236,7 @@ class VGG:
         config['num_epoch'] = epoch
         config['MAE'] = MAE
         params = self.get_trained_params(sess, wbp)
-        H5Writer.write('live_20.dah5', config=config, params_dict=params)
+        H5Writer.write('trained_diq_with_min_testing_error_step4.dah5', config=config, params_dict=params)
         print("Min error================================================{}".format(MAE))
 
 
@@ -250,22 +246,21 @@ class VGG:
         self.ops_layers()
         tn_bp = BatchDataServer(dtn[0], dtn[1], batch_size=bs)
         tt_bp = BatchDataServer(dtt[0], dtt[1], batch_size=bs)
-        MAE_T = self.MAE()
+
         solver = self.solver()
         min_test_mae = 120
         with tf.Session() as sess:
             sess.run(tf.initialize_all_variables())
             test_mae = self.evaluate(sess, tt_bp)
-
             print('at epoch {}, initial_mae {}'.format(0, test_mae))
             for e in range(num_epoch):
                 tn_bp.reset(tn_bp.X, tn_bp.Y)
                 for b in range(len(tn_bp)):
                     x, y = tn_bp.next()
-                    _, cost = sess.run([solver, MAE_T], feed_dict={self.X:x, self.Y:y})
+                    sess.run([solver], feed_dict={self.X:x, self.Y:y})
                     if b % 50 == 0:
-                        #train_mae = self.evaluate(sess, tn_bp)
-                        print('at batch {}, train_mae {}'.format(b, cost))
+                        train_mae = self.evaluate(sess, tn_bp)
+                        print('at batch {}, train_mae {}'.format(b, train_mae))
 
                 test_mae = self.evaluate(sess, tt_bp)
                 if test_mae < min_test_mae:
@@ -278,18 +273,12 @@ class VGG:
 
 
 def run_train():
-    #from diq.misc import get_xy
-    #from diq.misc import TIDData as D
-    from diq.misc import Live as D
-    #d =  D('../data/TID-2008/mos_with_names.txt')
-    d = D()
-    x, y = d.get_xy()
-
-    print("finished loading data", x.shape, y.shape)
+    from diq.misc import get_xy
+    x, y = get_xy()
+    print(x.shape, y.shape)
     x_op = tf.placeholder(tf.float32, [None, 224, 224, 3])
     y_op = tf.placeholder(tf.float32, [None, 1])
-    v = VGG('model/vgg15.dah5', x_op, y_op)
-    #v = VGG('tid2008_20.dah5', x_op, y_op)
+    v = VGG('vgg15.dah5', x_op, y_op)
     v.train(x, y, 200)
 
 
