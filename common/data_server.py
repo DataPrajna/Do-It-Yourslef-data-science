@@ -83,6 +83,7 @@ class BatchDataServer:
         self.start = 0
         self.end = batch_size
         self.batch_size = batch_size
+        self.epoch = 0
         self.X, self.Y = BatchDataServer.reset(X, Y)
 
     @staticmethod
@@ -97,6 +98,7 @@ class BatchDataServer:
         return int(np.ceil(self.X.shape[0]/self.batch_size))
 
     def next(self):
+        self.epoch += 1
         if self.end >= self.X.shape[0]:
             lx = self.X[self.start:, :]
             ly = self.Y[self.start:, :]

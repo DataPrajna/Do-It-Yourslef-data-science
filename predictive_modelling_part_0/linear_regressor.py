@@ -18,21 +18,18 @@ class LinearRegressor:
          print_frequency
 
      Examples:
-
           let's create a traing and testing datasets
           >>> num_sample = 10000
           >>> train_X = numpy.linspace(-3, 3, num_sample, dtype=numpy.float32)
           >>> train_X = train_X.reshape((-1, 1))
-          #>>> train_Y = 5+2*train_X+4*train_X*train_X + 0.1*numpy.random.randn(num_sample, 1)
           >>> train_Y = numpy.sin(train_X)
-
           >>> train_Y = train_Y.reshape(-1, 1)
 
           now lets instantiate the class
           >>> lr = LinearRegressor(lr = 0.001, num_epocs = 5000, print_frequency = 100, num_features=5)
-          let set the initial W and b using a random numb
 
-           >>> lr.set_parameters()
+          let set the initial W and b using a random numb
+          >>> lr.set_parameters()
 
 
            now lets train the linear regressor on the constructor training dataset train_x and train_y
