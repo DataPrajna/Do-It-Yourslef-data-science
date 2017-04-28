@@ -260,7 +260,7 @@ def test_train_mnist(n_sample = None):
     plt.plot(loss)
     plt.xlabel('epoch')
     plt.ylabel('loss')
-    #plt.title('Loss in Training')
+    plt.title('Loss in Training')
     plt.show()
 
 if __name__ == '__main__':
