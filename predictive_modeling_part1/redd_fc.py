@@ -18,9 +18,9 @@ from matplotlib import pyplot as plt
 
 
 
-class MnistModel:
+class DeepNILM:
     """
-     MnistModel class is designed to claculate weight (w) and bias (b) from a set of inputs and matching outputs.
+     DeepNILM class is designed to claculate weight (w) and bias (b) from a set of inputs and matching outputs.
 
      Args:
          lr  is learning rate
@@ -204,16 +204,16 @@ class MnistModel:
 import numpy as np
 import random
 
-def test_train_mnist(n_sample = None):
+def test_train_NILM(n_sample = None):
     config = {
         'num_hidden_layers': 5,
         'order_poly': 4,
         'learning_rate': 0.00001,
-        'num_epochs': 100000,
-        'print_frequency': 1000,
+        'num_epochs': 1000,
+        'print_frequency': 100,
     }
 
-    lr = MnistModel(config)
+    lr = DeepNILM(config)
     f = h5py.File(r'C:\Users\ppdash\workspace\deep-nilmtk\Data\b1to5top5ukDale.h5')
     x = f['samples'].value
 
@@ -277,7 +277,7 @@ def test_train_mnist(n_sample = None):
 
 
 if __name__ == '__main__':
-    test_train_mnist()
+    test_train_NILM()
     #import doctest
     #doctest.testmod()
 
