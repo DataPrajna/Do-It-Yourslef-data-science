@@ -160,6 +160,7 @@ class MnistModel:
         batch_data = BatchDataServer(train_X, train_Y, batch_size = 128)
         lr = self.lr
         loss = []
+        accuracy_training =[]
 
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
@@ -173,6 +174,7 @@ class MnistModel:
                 [_, cost] = sess.run([solver, cost_function],
                                          feed_dict={self.X: x1, self.Y: y1,  self.learning_rate:lr})
                 loss.append(cost)
+                accuracy_training.append(accuracy)
 
                 if (batch_data.epoch + 1) % self.print_frequency == 0:
                     [cost] = sess.run([cost_function], feed_dict={self.X: train_X, self.Y: train_Y, self.learning_rate:lr})
@@ -192,7 +194,7 @@ class MnistModel:
                         print('writing to')
                         frame.to_csv('confusion.csv')
 
-        return_dict = {'parameters': params_dict, 'loss': loss}
+        return_dict = {'parameters': params_dict, 'loss': loss, 'Accuracy': accuracy_training}
         return return_dict
 
 
@@ -207,7 +209,7 @@ def test_train_mnist(n_sample = None):
         'num_hidden_layers': 5,
         'order_poly': 4,
         'learning_rate': 0.00001,
-        'num_epochs': 10000,
+        'num_epochs': 100000,
         'print_frequency': 1000,
     }
 
@@ -257,11 +259,22 @@ def test_train_mnist(n_sample = None):
    # accuracy_test = true_match / len(test_predict)
     print("accuracy on testing appliance data after training is {}".format(accuracy_test))
     loss = learned_params['loss']
+    accuracy_training = learned_params['Accuracy']
     plt.plot(loss)
     plt.xlabel('epoch')
     plt.ylabel('loss')
-    plt.title('Loss in Training')
+    plt.title('Loss in Training Phase')
     plt.show()
+    plt.plot(accuracy_training)
+    plt.xlabel('epoch')
+    plt.ylabel('Accuracy')
+    plt.title('Accuracy in Training Phase')
+    plt.show()
+
+
+    #plt.plot(accuracy_test)
+    #plt.show()
+
 
 if __name__ == '__main__':
     test_train_mnist()
