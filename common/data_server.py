@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 import csv
 import numpy as np
 import pandas as pd
+from copy import deepcopy
 
 '''
 class BaseDataServer(metaclass=ABCMeta):
@@ -79,17 +80,19 @@ class PandaDataServer(BaseDataServer):
 '''
 
 class BatchDataServer:
-    def __init__(self, X, Y, batch_size = None):
+    def __init__(self, X_O, Y_O, batch_size = None):
         self.start = 0
         self.end = batch_size
         self.batch_size = batch_size
         self.epoch = 0
+        X = deepcopy(X_O)
+        Y = deepcopy(Y_O)
         self.X, self.Y = BatchDataServer.reset(X, Y)
 
     @staticmethod
     def reset(X, Y):
         indx = np.random.randint(0, X.shape[0], X.shape[0])
-        X =X[indx, :]
+        X = X[indx, :]
         Y = Y[indx, :]
         return X, Y
 
