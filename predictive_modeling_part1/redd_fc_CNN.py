@@ -28,7 +28,10 @@ class DeepNILM:
 
      Examples:
 
-          let's create a traing and testing datasets
+          let's create a training and testing datasets
+          Dataset used is ukdale
+          number_class is number of appliances to be detected
+          vgg16 is the class with convolution and fully connected layers
 
     """
     def __init__(self, config):
@@ -67,12 +70,27 @@ class DeepNILM:
     def compute_stats(self, x, y, sess):
         batch_data = BatchDataServer(x, y, batch_size=128)
         total_accuracy = 0
+        confusion_tensor = tf.stack([tf.argmax(self.Y, 1), tf.argmax(self.predictor(), 1)])
+        confusion_mat = np.zeros([self.number_class, self.number_class], int)
+
         while batch_data.epoch < len(batch_data):
             x1, y1 = batch_data.next()
-            [accuracy] = sess.run([self.tensors['accuracy']],
+
+            [accuracy, con_mat] = sess.run([self.tensors['accuracy'], confusion_tensor],
                                        feed_dict={self.X: x1, self.Y: y1})
             total_accuracy = total_accuracy + accuracy
-        return total_accuracy / len(batch_data)
+            for p in con_mat.T:
+                confusion_mat[p[0], p[1]] += 1
+
+        dataframe = pd.DataFrame(confusion_mat)
+        label = ['dw', 'fr', 'li', 'wd', 'mw', 'ket',
+                 'comp', 'oven']
+        dataframe.index = label
+        dataframe.columns = label
+
+        print(pd.DataFrame(dataframe))
+
+        return total_accuracy / len(batch_data), pd.DataFrame(dataframe)
 
     def update_tensors_with_learned_params(self, learned_params, sess):
         for key in learned_params:
@@ -88,26 +106,11 @@ class DeepNILM:
     def get_trained_params(self, sess):
         return self.variables
 
-    def confusion_mat(self, x, y):
-        res = tf.stack([tf.argmax(self.Y, 1), tf.argmax(self.predictor(), 1)])
-        ans = res.eval(feed_dict={self.X: x, self.Y: y})
-        confusion = np.zeros([self.number_class, self.number_class], int)
-        for p in ans.T:
-            confusion[p[0], p[1]] += 1
-
-        dataframe =  pd.DataFrame(confusion)
-        label = ['dw', 'fr', 'li', 'wd', 'mw', 'ket',
-                 'comp', 'oven']
-        dataframe.index = label
-        dataframe.columns = label
-
-        print(pd.DataFrame(dataframe))
-        return pd.DataFrame(dataframe)
 
     def write_params_to_file(self, filename, params_dict):
         H5Writer.write(filename, self.config, params_dict)
 
-    def train(self, x=None, y=None, filename=None):
+    def train(self, x=None, y=None, x_test=None, y_test=None, filename=None):
         cost_function = self.cost_function()
         solver = self.solver();
         batch_data = BatchDataServer(x, y, batch_size = 128)
@@ -117,8 +120,7 @@ class DeepNILM:
 
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
-            self.confusion_mat(x, y)
-            accuracy = self.compute_stats(x, y, sess)
+            accuracy, conf_mat = self.compute_stats(x, y, sess)
             print("accuracy on testing appliance data before training are", accuracy)
             while batch_data.epoch < self.num_epochs:
                 x1, y1 = batch_data.next()
@@ -134,16 +136,21 @@ class DeepNILM:
                     lr = self.lr * numpy.exp(-3.1*(batch_data.epoch/(self.num_epochs+1.0)))
                     print(lr)
                     params_dict = self.get_trained_params(sess)
-                    frame = self.confusion_mat(x, y)
-                    accuracy = self.compute_stats(x, y, sess)
+                    accuracy, frame = self.compute_stats(x, y, sess)
                     self.config['learning_rate'] = lr
                     print("accuracy on testing appliance data after training is {} with a learning rate of {}".format(accuracy, lr))
                     frame = frame / frame.sum()
                     if accuracy > 0.7:
                         print('writing to')
                         frame.to_csv('confusion.csv')
+                #if (batch_data.epoch + 1) % 10000 == 0:
+                    print("performing testing \n \n \n ...................................")
+                    accuracy_test, conf_mat_test = self.compute_stats(x_test, y_test, sess)
+                    print("testing _confmat", conf_mat_test)
+                    print("Testing accuracy is {} with a learning rate of {}".format(accuracy_test, lr))
 
         return_dict = {'parameters': params_dict, 'loss': loss, 'Accuracy': accuracy_training}
+        #self.write_params_to_file('nilm_vd16.da', self.variables)
         return return_dict
 
 
@@ -152,14 +159,15 @@ class DeepNILM:
 
 import numpy as np
 import random
+    
 
 def test_train_NILM(n_sample = None):
     config = {
         'num_hidden_layers': 5,
         'order_poly': 4,
         'learning_rate': 0.00001,
-        'num_epochs': 1000,
-        'print_frequency': 100,
+        'num_epochs': 100000,
+        'print_frequency': 1000,
     }
 
     lr = DeepNILM(config)
@@ -177,11 +185,18 @@ def test_train_NILM(n_sample = None):
     dummy = f['labels'].value
     dummy = dummy[rIdx]
     train_y = np.zeros(shape=(n_sample, lr.number_class))
+    test_y = np.zeros(shape=(len(dummy)-n_sample, lr.number_class))
     for i in range(0, n_sample):
         train_y[i, dummy[i]] = 1
-    test_dummy = dummy[n_sample:]
 
-    learned_params = lr.train(x=train_x, y=train_y, filename=None)
+    for i in range(n_sample, len(dummy)):
+        test_y[i-n_sample, dummy[i]] = 1
+
+    test_dummy = dummy[n_sample:]
+    learned_params = lr.train(x=train_x, y=train_y,  x_test=test_x, y_test=test_y, filename=None)
+
+
+
    #  y_hat = lr.predict(learned_params['parameters'], X = test_x)
    #  test_predict = np.argmax(y_hat[0], axis=1)
    #  confusion_test = np.zeros([lr.number_class,lr.number_class], int)
